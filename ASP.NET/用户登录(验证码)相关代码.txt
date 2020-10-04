@@ -1,0 +1,122 @@
+1　　验证码生成页面 ImageCode.aspx。该页前台不用处理，后台 ImageCode.aspx.cs 代码如下：
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+
+public partial class ImageCode : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        string tmp = RndNum(4);
+        HttpCookie a = new HttpCookie("ImageV ", tmp);
+        Response.Cookies.Add(a);
+        this.ValidateCode(tmp);
+    }
+    private void ValidateCode(string VNum)
+    {
+        Bitmap Img = null;
+        Graphics g = null;
+        MemoryStream ms = null;
+        int gheight = VNum.Length * 12;
+        Img = new Bitmap(gheight, 25);
+        g = Graphics.FromImage(Img);
+        //生成随机生成器
+        Random random = new Random();
+        //背景颜色
+        g.Clear(Color.White);
+        for (int i = 0; i < 100; i++)
+        {
+            int x = random.Next(Img.Width);
+            int y = random.Next(Img.Height);
+            Img.SetPixel(x, y, Color.FromArgb(random.Next()));
+        }
+
+        //文字字体
+        Font f = new Font("Arial Black ", 12);
+        //文字颜色
+        SolidBrush s = new SolidBrush(Color.Blue);
+        g.DrawString(VNum, f, s, 3, 3);
+        ms = new MemoryStream();
+        Img.Save(ms,ImageFormat.Jpeg);
+        Response.ClearContent();
+        Response.ContentType = "image/Jpeg ";
+        Response.BinaryWrite(ms.ToArray());
+        g.Dispose();
+        Img.Dispose();
+        Response.End();
+    }
+    private string RndNum(int VcodeNum)
+    {
+        string Vchar = "0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z";
+        string[] VcArray = Vchar.Split(new Char[] { ',' });
+        string VNum = " ";
+        int temp = -1;
+        Random rand = new Random();
+        for (int i = 1; i < VcodeNum + 1; i++)
+        {
+            if (temp != -1)
+            {
+                rand = new Random(i * temp * unchecked((int)DateTime.Now.Ticks));
+            }
+            int t = rand.Next(35);
+            if (temp != -1 && temp == t)
+            {
+                return RndNum(VcodeNum);
+            }
+            temp = t;
+            VNum += VcArray[t];
+        }
+        return VNum;
+    }
+}
+
+
+
+2  login.aspx的前台主要代码
+
+　编号：<asp:TextBox ID="TextBox1" runat="server" Height="29px" Width="150px"></asp:TextBox>
+        <br />
+        <br />
+  密码：<asp:TextBox ID="TextBox2" runat="server" Height="29px" Width="148px"></asp:TextBox>
+        <br />
+        <br />
+  验证码：<asp:TextBox ID="tbx_yzm" runat="server" Width="70px"></asp:TextBox>
+<asp:ImageButton ID="ibtn_yzm" runat="server" />
+<a href="javascript:changeCode()" style="text-decoration: underline; font-size:10px;">换一张</a>
+<script type="text/javascript">
+    function changeCode(){
+        document.getElementById('ibtn_yzm').src = document.getElementById('ibtn_yzm').src + '?';
+    }
+</script>
+        <br />
+        <br />
+        <asp:Button ID="Button1" runat="server" onclick="Button1_Click" Text="提交" />
+
+
+
+
+
+3   login.aspx.cs 后台代码,判断验证码是否正确的代码如下：
+    
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        ibtn_yzm.ImageUrl = "ImageCode.aspx";
+     }
+
+    protected void Button1_Click(object sender, EventArgs e)
+    {
+        string code = tbx_yzm.Text;
+        HttpCookie htco = Request.Cookies["ImageV"];
+        string scode = htco.Value.ToString();
+        if (code != scode)
+        {//如果验证码不正确，则弹出提示对话框
+            Response.Write("<script>alert('验证码输入不正确！')</script>");
+        }
+     }
